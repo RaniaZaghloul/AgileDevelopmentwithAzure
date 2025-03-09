@@ -25,5 +25,5 @@ curl -d '{
    }
 }'\
      -H "Content-Type: application/json" \
-     -X POST https://witty-desert-23a17c7f08f146a49c37239bb72780b4.azurewebsites.net:$PORT/predict 
+     -X POST https://uniqueappname1221.azurewebsites.net/:$PORT/predict 
      #your application name <yourappname>goes here

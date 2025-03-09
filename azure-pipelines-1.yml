@@ -1,0 +1,51 @@
+# Starter pipeline    
+# Builds, runs tests, and deploys a Flask app
+
+trigger:
+- main
+
+# TODO: Replace the agent pool name
+pool: myAgentPool
+
+variables:
+  azureServiceConnectionId: 'myServiceConnection'  # Replace with actual service connection
+  webAppName: 'mywebapp20223110'
+  environmentName: 'flask-ml-service'
+  projectRoot: $(System.DefaultWorkingDirectory)
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: BuildJob
+    pool: myAgentPool
+    steps:    
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.10'  # Use Python 3.10+
+      displayName: 'Step 1 - Set Python Version'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      workingDirectory: $(projectRoot)
+      displayName: 'Step 2 - Install Dependencies'
+
+    - script: |
+        export PATH=$HOME/.local/bin:$PATH
+        python3.10 -m pylint --disable=W0718,C0303 app.py
+      workingDirectory: $(projectRoot)
+      displayName: 'Step 3 - Run Linter'
+
+    - task: ArchiveFiles@2
+      displayName: 'Step 4 - Archive files'
+      inputs:
+        rootFolderOrFile: '$(projectRoot)'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        replaceExistingArchive: true
+
+    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+      displayName: 'Step 5 - Upload package'
+      artifact: drop

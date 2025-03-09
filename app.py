@@ -1,6 +1,9 @@
-from flask import Flask, request, jsonify
+"""Flask application for housing price prediction"""
+
+import logging  # Standard library imports
+
+from flask import Flask, request, jsonify  # Third-party imports
 from flask.logging import create_logger
-import logging
 
 import pandas as pd
 import joblib
@@ -11,35 +14,37 @@ LOG = create_logger(app)
 LOG.setLevel(logging.INFO)
 
 def scale(payload):
-    """Scales Payload"""
-
-    LOG.info("Scaling Payload: %s payload")
+    """Scales the input payload using StandardScaler."""
+    LOG.info("Scaling Payload: %s", payload)
     scaler = StandardScaler().fit(payload)
     scaled_adhoc_predict = scaler.transform(payload)
     return scaled_adhoc_predict
 
 @app.route("/")
 def home():
-    html = "<h3>Sklearn Prediction Home</h3>"
-    return html.format(format)
+    """Returns a simple HTML home page."""
+    return "<h3>Sklearn Prediction Home</h3>"
 
-# TO DO:  Log out the prediction value
 @app.route("/predict", methods=['POST'])
 def predict():
-    # Performs an sklearn prediction
+    """Handles prediction requests and returns model predictions."""
     try:
-        # Load pretrained model as clf. Try any one model. 
+        # Load pretrained model
         clf = joblib.load("./Housing_price_model/LinearRegression.joblib")
-        # clf = joblib.load("./Housing_price_model/StochasticGradientDescent.joblib")
-        # clf = joblib.load("./Housing_price_model/GradientBoostingRegressor.joblib")
-    except Exception as e:
-        LOG.error("Error loading model: %s", str(e))  # Log the exception with the error message
-        return jsonify({"error": "Model not loaded", "details": str(e)}), 500
+    except FileNotFoundError:
+        LOG.error("Model file not found.")
+        return jsonify({"error": "Model not loaded"}), 500
+    except joblib.externals.loky.process_executor.BrokenProcessPool:
+        LOG.error("Joblib process pool error.")
+        return jsonify({"error": "Model execution error"}), 500
+    except ValueError as e:
+        LOG.error("Value error: %s", str(e))
+        return jsonify({"error": "Invalid input data"}), 400
 
     json_payload = request.json
-    LOG.info("JSON payload: %s json_payload")
+    LOG.info("JSON payload received: %s", json_payload)
     inference_payload = pd.DataFrame(json_payload)
-    LOG.info("inference payload DataFrame: %s inference_payload")
+    LOG.info("Inference payload DataFrame: %s", inference_payload)
     scaled_payload = scale(inference_payload)
     prediction = list(clf.predict(scaled_payload))
     return jsonify({'prediction': prediction})
